@@ -196,7 +196,11 @@ LINA handles:
 * output explanation
 
 ---
+<img width="1536" height="1024" alt="ChatGPT Image May 10, 2026, 02_17_23 AM" src="https://github.com/user-attachments/assets/a7729e41-4ef7-4429-8685-7c07356df144" />
+<img width="1536" height="1024" alt="ChatGPT Image May 10, 2026, 02_20_56 AM" src="https://github.com/user-attachments/assets/f01cfb8a-c4dd-43cc-a348-02ee7ab7345a" />
+<img width="1536" height="1024" alt="ChatGPT Image May 10, 2026, 02_24_14 AM" src="https://github.com/user-attachments/assets/0c059ef3-042f-4fd8-9f97-b61c81dbb4e2" />
 
+# screenshorts from version v0.6 - Alpha
 # Current Version
 
 ```text
