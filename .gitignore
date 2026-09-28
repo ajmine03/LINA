@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local runs and generated artifacts
+runs/
+reports/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*~

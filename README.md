@@ -1,279 +1,236 @@
-# LINA
+# LINA (Linux Intelligent Native Assistant)
 
-Linux Intelligent Native Assistant
+**Local-First, Terminal-Based AI Security Testing Agent & Operating Assistant**
 
-A local open-source AI operating assistant for Linux.
+LINA is an open-source, local-first security testing and auditing agent designed to help developers, systems administrators, and security professionals assess their authorized infrastructure. Powered locally by [Ollama](https://ollama.com) (defaulting to `qwen2.5:3b`), LINA enforces strict scope boundaries, requires human-in-the-loop approval before active actions, utilizes only non-destructive tools, and produces evidence-backed assessment reports.
 
-LINA is designed to behave like a real AI assistant instead of a hardcoded command bot.
-It runs locally using Ollama and Linux tools, understands natural language, generates terminal commands dynamically, explains command outputs, and interacts conversationally.
-
----
-
-# Features
-
-## Local AI Runtime
-
-* Fully local AI using Ollama
-* Offline capable
-* Privacy-focused
-* No cloud dependency required after model download
-
-## Conversational Linux Assistant
-
-* Natural language interaction
-* Streaming AI responses
-* Context-aware conversation
-* Short intelligent replies
-
-## AI-Generated Linux Commands
-
-Examples:
-
-```text
-install vscode
-check storage
-list downloads
-remove firefox
-open firefox
-```
-
-LINA dynamically generates Linux terminal commands using the local LLM.
+> [!IMPORTANT]
+> **Authorized-Use Policy & Legal Disclaimer**:
+> LINA must only be used against IP addresses, domains, and systems that you own or have explicit, prior written authorization to test. LINA is designed strictly for defensive assessment and hardening. It is **not** an unrestricted attack tool and deliberately excludes exploitation payloads, brute force, credential stuffing, denial-of-service, stealth evasion, and persistence mechanisms.
 
 ---
 
-# Current Capabilities
+## Architecture Overview
 
-* AI-generated Linux commands
-* Dangerous command detection
-* Confirmation before execution
-* AI explanation of terminal outputs
-* Auto screen clearing
-* Conversational fallback AI
-* Local execution engine
-* Streaming responses
-
----
-
-# Example
-
-```text
-You: check my storage
+```
+User Request / Target & Scope
+             │
+             ▼
+   [Scope Validation Engine] ────────── Reject out-of-scope targets & redirects
+             │
+             ▼
+   [Structured Planner (Ollama)] ────── Queries local LLM for safe next step
+             │
+             ▼
+   [Policy & Safety Guardrails] ─────── Enforces argument whitelist & checks
+             │
+             ▼
+   [Human Approval Gate] ────────────── Operator interactive confirmation (y/N)
+             │
+             ▼
+   [Non-Destructive Tool Execution] ─── DNS / HTTP / TLS / Nmap (No shell=True)
+             │
+             ▼
+   [Evidence-Based Analyzer] ────────── Separates observations from hypotheses
+             │
+             ▼
+   [Audit Log & Final Report] ───────── Saves runs/<run_id>/ & reports/
 ```
 
-LINA:
+### Directory Structure
 
 ```text
-COMMAND: df -h
-```
-
-Then:
-
-```text
-Execute command? (y/n)
-```
-
-After execution:
-
-```text
-LINA Explanation:
-Your Linux partition has around 81 GB free space remaining.
+LINA/
+├── main.py                     # CLI entrypoint (lina scan, tools, status, report, knowledge)
+├── config.py                   # Global configuration, OS detection, and safety defaults
+├── assistant.py                # Preserved classic conversational assistant (LINA v1.x)
+├── agent/
+│   ├── orchestrator.py         # Bounded agent loop (Plan -> Check -> Execute -> Analyze)
+│   ├── planner.py              # Structured Ollama planning with Pydantic schemas & fallback
+│   ├── policy.py               # Security policy, dangerous argument checks, approval gates
+│   ├── scope.py                # Exact IP, CIDR, and domain scope validation engine
+│   ├── analyzer.py             # Evidence vs. hypothesis analyzer & prompt-injection defense
+│   ├── memory.py               # Immutable JSONL audit trail & session memory
+│   └── knowledge.py            # CTF knowledge search & lesson retrieval engine
+├── tools/
+│   ├── base.py                 # Abstract BaseTool interface & ToolResult model
+│   ├── dns_lookup.py           # Passive DNS resolution (A, AAAA, CNAME, PTR)
+│   ├── http_probe.py           # HTTP metadata, security headers, and banner inspection
+│   ├── tls_check.py            # TLS/SSL certificate validity, expiry, and cipher audit
+│   ├── nmap.py                 # Non-destructive port discovery & service version enumeration
+│   └── report.py               # Markdown and JSON assessment report generator
+├── knowledge/
+│   ├── README.md               # Knowledge base philosophy & prompt-injection warning
+│   ├── methodology.md          # Security assessment phases and guidelines
+│   └── lessons.jsonl           # Structured, vetted CTF lessons & hardening advice
+├── runs/                       # Per-run execution logs and audit trails (audit.jsonl)
+├── reports/                    # Generated Markdown and JSON reports
+└── tests/                      # Comprehensive unit and integration test suite
 ```
 
 ---
 
-# Architecture
+## Features
 
-```text
-User
- ↓
-LINA
- ↓
-Ollama Local LLM
- ↓
-AI-generated Linux command
- ↓
-Safety confirmation
- ↓
-Linux execution
- ↓
-AI explanation layer
-```
+### 1. Strict Scope Validation
+- Supports exact IPv4/IPv6 addresses, CIDR blocks (e.g. `10.0.0.0/24`), and specific domains.
+- Prevents out-of-scope redirection hijacking (e.g. HTTP 301/302 redirects leading to unapproved third-party hosts).
 
----
+### 2. Guardrails & Approval Gates
+- Strict whitelist of non-destructive assessment tools.
+- Dangerous flags (such as `--script=exploit*`, `--script=dos*`, shell chaining characters `; | & $`) are blocked immediately.
+- Active actions (e.g., HTTP probing, Nmap port scanning) require interactive operator confirmation (`[y/N]`).
 
-# Tech Stack
+### 3. Non-Destructive Toolset
+- **`dns_lookup`**: Python native DNS querying without external binary dependencies.
+- **`http_probe`**: Inspects server banners, missing security headers (`HSTS`, `CSP`, `X-Frame-Options`, `X-Content-Type-Options`), and redirect chains.
+- **`tls_check`**: Checks certificate issuer, SANs, days remaining until expiry, and supported SSL/TLS versions.
+- **`nmap`**: Runs parameterized subprocess commands (never `shell=True`) limited to non-destructive port discovery (`-T3`, `--top-ports 100`, `--open`).
+- **`report`**: Compiles findings into Markdown and JSON formats.
 
-* Python
-* Ollama
-* Qwen2.5
-* Linux Terminal
-* subprocess
-* Regex command extraction
+### 4. Evidence vs. Hypothesis Separation
+- Findings clearly distinguish factual observations (e.g. "Server returned `nginx/1.18.0`") from hypotheses.
+- Banners alone are never treated as confirmation of an exploitable vulnerability due to vendor security backports.
+
+### 5. Local AI Runtime & Offline Resiliency
+- Operates entirely locally with Ollama (no cloud API keys or telemetry).
+- Deterministic fallback allows full security assessment even if Ollama is temporarily offline.
 
 ---
 
-# Installation
+## Installation & Setup
 
-## Clone Repository
-
+### 1. Clone & Enter Repository
 ```bash
 git clone https://github.com/ajmine03/LINA.git
-```
-
-## Enter Project
-
-```bash
 cd LINA
 ```
 
-## Create Virtual Environment
-
+### 2. Create and Activate Virtual Environment
 ```bash
 python3 -m venv venv
-```
-
-## Activate Virtual Environment
-
-```bash
 source venv/bin/activate
 ```
 
-## Install Dependencies
-
+### 3. Install Dependencies
 ```bash
-venv/bin/pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
----
-
-# Install Ollama
-
-Official Website:
-
-[https://ollama.com](https://ollama.com)
-
-Linux install:
-
+### 4. Install Ollama and Download Model
+Install Ollama from [ollama.com](https://ollama.com) or on Linux:
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
 ```
-
----
-
-# Download AI Model
-
-Recommended:
-
+Download the recommended local model:
 ```bash
 ollama run qwen2.5:3b
 ```
 
 ---
 
-# Run LINA
+## Configuration
+
+LINA can be configured via environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `OLLAMA_HOST` | `http://localhost:11434` | Ollama daemon API endpoint |
+| `LINA_MODEL` | `qwen2.5:3b` | Default Ollama model name |
+| `LINA_MAX_STEPS` | `10` | Maximum bounded steps in agent loop |
+| `LINA_TOOL_TIMEOUT` | `30` | Per-tool execution timeout in seconds |
+| `LINA_MAX_OUTPUT_BYTES` | `51200` (50 KB) | Tool raw output truncation threshold |
+| `LINA_TEMPERATURE` | `0.2` | Model temperature for deterministic planning |
+
+---
+
+## CLI Usage
+
+### Check System Status
+Verify local environment, Ollama connectivity, and tool availability:
+```bash
+python3 main.py status
+```
+
+### List Registered Tools
+View all tools, descriptions, and policy risk levels (PASSIVE vs ACTIVE):
+```bash
+python3 main.py tools
+```
+
+### Run an Authorized Assessment
+Scan an authorized target using a scope definition file:
+```bash
+python3 main.py scan 127.0.0.1 --scope tests/fixtures/test_scope.json
+```
+
+Or scan a single authorized host directly (prompts for authorization verification):
+```bash
+python3 main.py scan 127.0.0.1
+```
+
+Additional scan flags:
+- `--max-steps 5`: Limits maximum agent steps.
+- `--model qwen2.5:3b`: Specifies custom Ollama model.
+- `--non-interactive`: Runs without interactive prompts (auto-skips active tools requiring confirmation).
+
+### View Assessment Reports
+Locate and view reports generated during a scan:
+```bash
+python3 main.py report <run_id>
+```
+Reports are stored permanently in `reports/<run_id>_report.md` and `reports/<run_id>_report.json`.
+
+### Search CTF & Hardening Knowledge Base
+Search structured security lessons and remediation patterns:
+```bash
+python3 main.py knowledge search "header"
+python3 main.py knowledge list
+```
+
+---
+
+## Scope File Format
+
+Create a JSON scope file to define testing boundaries:
+
+```json
+{
+  "name": "staging_environment_scope",
+  "description": "Authorized staging servers audit",
+  "allowed_ips": ["192.168.1.50"],
+  "allowed_cidrs": ["10.10.0.0/24"],
+  "allowed_domains": ["staging.internal.corp"],
+  "allow_subdomains": false,
+  "disallowed_targets": ["10.10.0.1"],
+  "rate_limit_per_minute": 60
+}
+```
+
+---
+
+## Running the Test Suite
+
+LINA includes comprehensive unit tests verifying scope enforcement, policy guardrails, tool execution, bounded loops, and prompt-injection defenses:
 
 ```bash
-venv/bin/python assistant.py
+pytest -v tests/
+```
+
+Tests run completely offline and use local loopback fixtures without generating external network traffic.
+
+---
+
+## Classic Assistant Mode
+
+The original conversational terminal assistant is preserved for backward compatibility:
+
+```bash
+python3 assistant.py
 ```
 
 ---
 
-# Safety Philosophy
+## License
 
-LINA NEVER:
-
-* stores passwords
-* bypasses sudo
-* silently executes dangerous commands
-
-Linux itself handles authentication.
-
-LINA handles:
-
-* reasoning
-* command generation
-* assistant behavior
-* output explanation
-
----
-<img width="1536" height="1024" alt="ChatGPT Image May 10, 2026, 02_17_23 AM" src="https://github.com/user-attachments/assets/a7729e41-4ef7-4429-8685-7c07356df144" />
-<img width="1536" height="1024" alt="ChatGPT Image May 10, 2026, 02_20_56 AM" src="https://github.com/user-attachments/assets/f01cfb8a-c4dd-43cc-a348-02ee7ab7345a" />
-<img width="1536" height="1024" alt="ChatGPT Image May 10, 2026, 02_24_14 AM" src="https://github.com/user-attachments/assets/0c059ef3-042f-4fd8-9f97-b61c81dbb4e2" />
-
-# screenshorts from version v0.6 - Alpha
-# Current Version
-
-```text
-LINA v0.6-alpha
-```
-
-Current focus:
-
-* AI operating assistant architecture
-* Linux integration
-* execution engine
-* conversational UX
-
----
-
-# Roadmap
-
-## v0.7
-
-* intelligent execution engine
-* async terminal handling
-* live command streaming
-* better sudo handling
-* process cancellation
-
-## v0.8
-
-* file understanding
-* code summarization
-* project analysis
-* file editing
-
-## v0.9
-
-* memory system
-* persistent context
-* preference learning
-
-## v1.0
-
-* real Linux AI agent
-* autonomous workflows
-* multi-step planning
-* advanced tool orchestration
-
----
-
-# Vision
-
-```text
-Local.
-Private.
-Open-source.
-Linux-native.
-AI-first.
-```
-
----
-
-# Disclaimer
-
-LINA is an experimental AI operating assistant.
-AI-generated Linux commands can be dangerous.
-Always review commands before execution.
-
----
-
-# License
-
-MIT License
-
----
-
-# Repository
-
-[https://github.com/ajmine03/LINA](https://github.com/ajmine03/LINA)
+This project is licensed under the [MIT License](LICENSE).
