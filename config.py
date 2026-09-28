@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 
 # Base Paths
+VERSION = "2.0.0"
 BASE_DIR = Path(__file__).resolve().parent
 RUNS_DIR = BASE_DIR / "runs"
 REPORTS_DIR = BASE_DIR / "reports"
