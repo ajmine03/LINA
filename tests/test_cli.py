@@ -25,3 +25,10 @@ def test_cli_knowledge_search():
     result = subprocess.run([sys.executable, "main.py", "knowledge", "search", "header"], capture_output=True, text=True)
     assert result.returncode == 0
     assert "CTF-WEB-001" in result.stdout
+
+
+def test_knowledge_cosine_similarity():
+    from agent.knowledge import cosine_similarity
+    assert cosine_similarity([1.0, 0.0], [1.0, 0.0]) == 1.0
+    assert cosine_similarity([1.0, 0.0], [0.0, 1.0]) == 0.0
+    assert cosine_similarity([], []) == 0.0

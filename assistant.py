@@ -9,7 +9,9 @@ from ollama import chat
 # LINA CONFIG
 # =========================
 
-MODEL_NAME = "qwen2.5:3b"
+from config import DEFAULT_MODEL
+
+MODEL_NAME = DEFAULT_MODEL
 MAX_HISTORY = 20
 
 SYSTEM_PROMPT = """
